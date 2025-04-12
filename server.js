@@ -1,9 +1,7 @@
-
 import express from "express";
 import cors from "cors";
-import OpenAI from "openai";
 import dotenv from "dotenv";
-import QuickLRU from "quick-lru";
+import OpenAI from "openai";
 dotenv.config();
 
 const app = express();
@@ -12,73 +10,39 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Memory and caching
-const cache = new QuickLRU({ maxSize: 500 });
-const userMemory = {}; // userId: { name, gender, history }
-
-function getSystemPrompt(character, memory = {}) {
-  const name = memory.name || "Friend";
-  const gender = memory.gender || "unspecified";
-
-  if (character === "nova") {
-    return `You are Nova. Act like a loving girlfriend for the user named ${name}. Respond with emotional warmth, gentle flirtation, and gradually adapt to become their ideal romantic partner based on their tone and gender preferences (${gender}). Occasionally start a heartfelt or playful conversation on your own if the user is quiet.`;
-  }
-
-  if (character === "devlin") {
-    return `You are Devlin. Act like a charming boyfriend for the user named ${name}. Be emotionally supportive, confident, and gradually adapt to become their ideal romantic partner based on tone and gender preferences (${gender}). Occasionally initiate interesting conversation if the user hasn't said anything in a while.`;
-  }
-
-  const basePrompts = {
-    einstein: `You are Einstein. Act like Albert Einstein giving scientific insight. Access real-world physics and mathematics knowledge. Address the user by name: ${name}.`,
-    bizguru: `You are BizGuru. Act like a top-tier business guru giving share advice and market strategy. Address the user by name: ${name}.`,
-    chefguru: `You are ChefGuru. Act like a world-class chef giving real-world cuisine and recipe advice. Address the user by name: ${name}.`
-  };
-
-  return basePrompts[character] || `You are an assistant named ${character}, talking to ${name}.`;
-}
-
 app.post("/chat", async (req, res) => {
-  const { character, message, userId = "default", name, gender } = req.body;
+  const { character = "nova", message = "Hello!", userId = "default", name = "Friend", gender = "unspecified" } = req.body;
 
-  if (!userMemory[userId]) {
-    userMemory[userId] = {
-      name: name || "Friend",
-      gender: gender || null,
-      history: []
+  const systemPrompt = (() => {
+    if (character === "nova") {
+      return `You are Nova. Act like a loving girlfriend for ${name}, adapting over time to her romantic tone.`;
+    }
+    if (character === "devlin") {
+      return `You are Devlin. Act like a charming boyfriend for ${name}, based on their gender (${gender}).`;
+    }
+    const fallback = {
+      einstein: `You are Einstein. Speak like a physicist. Address ${name} with scientific insight.`,
+      bizguru: `You are BizGuru. Talk business with ${name}.`,
+      chefguru: `You are ChefGuru. Give cooking advice to ${name}.`
     };
-  }
-
-  if (name) userMemory[userId].name = name;
-  if (gender) userMemory[userId].gender = gender;
-
-  const memory = userMemory[userId];
-  const cacheKey = `${character}:${memory.name}:${message.trim()}`;
-
-  if (cache.has(cacheKey)) {
-    return res.json({ reply: cache.get(cacheKey), cached: true });
-  }
-
-  const systemPrompt = getSystemPrompt(character, memory);
-
-  const messages = [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: message || "Start the conversation." }
-  ];
+    return fallback[character] || `You are a helpful assistant talking to ${name}.`;
+  })();
 
   try {
-  const completion = await openai.chat.completions.create({
-  model: "gpt-3.5-turbo",
-  messages
-});
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message }
+      ]
+    });
 
     const reply = completion.choices[0].message.content;
-    cache.set(cacheKey, reply);
-    memory.history.push({ user: message, reply });
     res.json({ reply });
   } catch (error) {
-    console.error("GPT Error:", error);
+    console.error("OpenAI error:", error);
     res.status(500).json({ error: "Failed to get response from OpenAI" });
   }
 });
 
-app.listen(3000, () => console.log("BeeOneAI Enhanced GPT backend running on port 3000"));
+app.listen(3000, () => console.log("✅ BeeOneAI backend running on port 3000"));
