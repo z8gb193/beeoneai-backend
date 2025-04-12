@@ -1,7 +1,7 @@
 
 import express from "express";
 import cors from "cors";
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 import dotenv from "dotenv";
 import QuickLRU from "quick-lru";
 dotenv.config();
@@ -10,9 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const openai = new OpenAIApi(new Configuration({
-  apiKey: process.env.OPENAI_API_KEY
-}));
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // Memory and caching
 const cache = new QuickLRU({ maxSize: 500 });
