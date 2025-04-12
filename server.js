@@ -71,7 +71,7 @@ app.post("/chat", async (req, res) => {
   messages
 });
 
-    const reply = completion.data.choices[0].message.content;
+    const reply = completion.choices[0].message.content;
     cache.set(cacheKey, reply);
     memory.history.push({ user: message, reply });
     res.json({ reply });
