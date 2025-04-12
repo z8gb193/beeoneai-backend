@@ -1,4 +1,3 @@
-
 {
   "name": "beeoneai-enhanced-backend",
   "type": "module",
@@ -11,7 +10,6 @@
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
-   "openai": "^4.28.1"
-    "quick-lru": "^6.1.0"
+    "openai": "^4.28.1"
   }
 }
